@@ -27,7 +27,7 @@ async function signIn(req: Request, res: Response) {
     }
 
     let token = jwtUtil.generateAccessToken({
-        id: user.id,
+        userId: user.id,
         nickname: user.nickname,
     }, `${TOKEN_DURATION_SECONDS}s`);
 
@@ -65,7 +65,7 @@ async function signUp(req: Request, res: Response) {
     });
 
     let token = jwtUtil.generateAccessToken({
-        id: user.id,
+        userId: user.id,
         nickname: user.nickname,
     }, `${TOKEN_DURATION_SECONDS}s`);
 
