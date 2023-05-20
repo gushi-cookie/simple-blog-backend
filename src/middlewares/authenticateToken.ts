@@ -1,9 +1,14 @@
 import jwt from 'jsonwebtoken';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+import { type TokenPayload } from '../utils/jwt.util';
 
 
-export default function authenticateToken(req: any, res: Response, next: Function) {
-    const authHeader = req.headers['authorization'];
+export interface CustomRequest extends Request {
+    payload: TokenPayload
+};
+
+export default function authenticateToken(req: Request, res: Response, next: Function) {
+    const authHeader = req.headers['authorization']?.replace('Bearer ', '');
     const token = authHeader && authHeader.split(' ')[0];
 
     if(token == null) {
@@ -11,13 +16,13 @@ export default function authenticateToken(req: any, res: Response, next: Functio
         return;
     }
 
-    jwt.verify(token, process.env.SECRET_TOKEN as string, (err: any, decoded: any) => {
+    jwt.verify(token, process.env.SECRET_TOKEN as string, (err: any, payload: any) => {
         if(err) {
             console.log(err);
             res.sendStatus(403);
             return;
         }
-        req.decoded = decoded;
+        (req as CustomRequest).payload = payload;
         next();
     });
 };
