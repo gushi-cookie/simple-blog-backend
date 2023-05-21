@@ -2,6 +2,7 @@ import { Dialect } from 'sequelize';
 import { Sequelize } from 'sequelize';
 import UserModel, { User } from './user.model';
 import BlogPostModel, { BlogPost } from './blog-post.model';
+import FileModel, { File } from './file.model';
 
 
 const dbName = process.env.DB_NAME as string;
@@ -22,7 +23,9 @@ const sequelizeConnection = new Sequelize({
 
 UserModel.defineModel(sequelizeConnection);
 BlogPostModel.defineModel(sequelizeConnection);
+FileModel.defineModel(sequelizeConnection);
 BlogPost.belongsTo(User, { foreignKey: 'userId' });
+File.belongsTo(BlogPost, { foreignKey: 'postId' });
 
 
 export default sequelizeConnection;
