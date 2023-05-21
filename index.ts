@@ -3,6 +3,7 @@ import sequelizeConnection from './src/models';
 import authRouter from './src/routes/auth';
 import blogPostRouter from './src/routes/blog-post';
 import postsListRouter from './src/routes/posts-list';
+import cdnRouter from './src/routes/cdn';
 
 
 const app: Express = express();
@@ -13,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(authRouter);
 app.use(blogPostRouter);
 app.use(postsListRouter);
+app.use(cdnRouter);
 
 
 (async () => {
