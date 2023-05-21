@@ -44,7 +44,16 @@ async function fetchList(req: Request, res: Response) {
     });
 };
 
+async function fetchPages(req: Request, res: Response) {
+    let rowsCount = await BlogPost.count();
+
+    res.json({
+        count: Math.ceil(rowsCount / PAGINATION),
+        pagination: PAGINATION,
+    });
+};
 
 export default {
     fetchList,
+    fetchPages,
 };
