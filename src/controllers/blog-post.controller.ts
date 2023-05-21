@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { BlogPost } from '../models/blog-post.model';
+import { File } from '../models/file.model';
 import { type CustomRequest } from '../middlewares/authenticateToken';
+import fileUtil, { type ValidatedFileName } from '../utils/file.util';
 
 
 async function fetchBlogPost(req: Request, res: Response) {
@@ -15,29 +17,58 @@ async function fetchBlogPost(req: Request, res: Response) {
         return;
     }
 
+    let file = await File.findOne({ 
+        where: { postId: post.id },
+        attributes: ['id', 'name', 'extension'],
+    });
+
+    let fileUrl;
+    if(file) fileUrl = `/cdn/files/${file.id}/${file.name}.${file.extension}`;
+
     res.json({
-        id: post.id,
-        userId: post.userId,
-        message: post.message,
-        date: post.date,
+        message: 'Success.',
+        post: {
+            id: post.id,
+            userId: post.userId,
+            message: post.message,
+            fileUrl,
+            date: post.date,
+        },
     });
 };
 
 async function createBlogPost(req: Request, res: Response) {
-    // expected body params: message
-    if(!req.body.message) {
-        res.status(400).json({ message: 'Couldn\'t handle the request due to invalid or insufficient params.' });
+    // expected body params: message OR file, fileName
+    if(!req.body.message && !req.body.file || req.body.file && !req.body.fileName) {
+        res.status(400).json({ message: 'Post create request must have one of these parameters: message OR file, fileName' });
         return;
     }
-    
-    let message: string = req.body.message;
-    let payload = (req as CustomRequest).payload;
 
+    let fileName: ValidatedFileName | null = null;
+    if(req.body.file) {
+        let result = fileUtil.validateFileName(req.body.fileName);
+        if(!result) return res.status(400).json({ message: 'File format is not supported.' });
+        fileName = result;
+    }
+    
+
+    let payload = (req as CustomRequest).payload;
     let post = await BlogPost.create({
         userId: payload.userId,
-        message: message,
+        message: req.body.message,
         date: Date.now(),
     });
+
+
+    if(req.body.file && fileName) {
+        await File.create({
+            postId: post.id,
+            name: fileName.name,
+            extension: fileName.extension,
+            data: req.body.file,
+        });
+    }
+
 
     res.json({
         message: 'Post created.',

@@ -4,7 +4,7 @@ import { DataTypes, Model, Sequelize } from 'sequelize';
 export class BlogPost extends Model {
     declare id: number;
     declare userId: number;
-    declare message: string;
+    declare message?: string;
     declare date: Date;
 };
 
@@ -22,7 +22,6 @@ function defineModel(sequelize: Sequelize) {
         },
         message: {
             type: DataTypes.STRING,
-            allowNull: false,
         },
         date: {
             type: DataTypes.DATE,
