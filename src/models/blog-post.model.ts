@@ -21,7 +21,7 @@ function defineModel(sequelize: Sequelize) {
             allowNull: false,
         },
         message: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
         },
         date: {
             type: DataTypes.DATE,

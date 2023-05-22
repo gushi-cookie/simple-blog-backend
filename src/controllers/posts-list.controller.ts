@@ -26,7 +26,7 @@ async function fetchList(req: Request, res: Response) {
     if(!pageNumber) pageNumber = 0;
 
     let result = await BlogPost.findAndCountAll({
-        order: ['date'],
+        order: [['date', 'DESC']],
         limit: PAGINATION,
         offset: PAGINATION * pageNumber,
         include: User,
