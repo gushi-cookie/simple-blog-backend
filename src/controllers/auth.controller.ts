@@ -1,4 +1,5 @@
 import jwtUtil from '../utils/jwt.util';
+import exitCodes from '../utils/exit-codes.util';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 import { User } from '../models/user.model';
@@ -10,8 +11,10 @@ const TOKEN_DURATION_SECONDS = 43200;
 async function signIn(req: Request, res: Response) {
     // expected body params: nickname, password
     if(!req.body.nickname || !req.body.password) {
-        res.status(400).json({ message: 'Couldn\'t handle the request due to invalid or insufficient params.' });
-        return;
+        return res.status(400).json({
+            code: exitCodes.INVALID_PARAMS,
+            message: 'Couldn\'t handle the request due to invalid or insufficient params.',
+        });
     }
 
     let nickname: string = req.body.nickname;
@@ -22,8 +25,10 @@ async function signIn(req: Request, res: Response) {
     });
 
     if(!user || !bcrypt.compareSync(password, user.passHash)) {
-        res.status(401).json({ message: 'User not found or passed password is wrong.' });
-        return;
+        return res.status(401).json({
+            code: exitCodes.INVALID_AUTH,
+            message: 'User not found or passed password is wrong.',
+        });
     }
 
     let token = jwtUtil.generateAccessToken({
@@ -33,6 +38,7 @@ async function signIn(req: Request, res: Response) {
 
     res.json({
         token,
+        code: exitCodes.OK,
         message: 'Login successful.',
         user: {
             id: user.id,
@@ -45,8 +51,10 @@ async function signIn(req: Request, res: Response) {
 async function signUp(req: Request, res: Response) {
     // expected body params: nickname, password
     if(!req.body.nickname || !req.body.password) {
-        res.status(400).json({ message: 'Couldn\'t handle the request due to invalid or insufficient params.' });
-        return;
+        return res.status(400).json({
+            code: exitCodes.INVALID_PARAMS,
+            message: 'Couldn\'t handle the request due to invalid or insufficient params.',
+        });
     }
 
     let nickname: string = req.body.nickname;
@@ -54,8 +62,10 @@ async function signUp(req: Request, res: Response) {
         where: { nickname },
     });
     if(user) {
-        res.status(409).json({ message: 'User with this nickname already exists.' });
-        return;
+        return res.status(409).json({
+            code: exitCodes.USER_ALREADY_EXISTS,
+            message: 'User with this nickname already exists.',
+        });
     }
 
     let passHash: string = bcrypt.hashSync(req.body.password, SALT_ROUNDS);
@@ -71,6 +81,7 @@ async function signUp(req: Request, res: Response) {
 
     res.json({
         token,
+        code: exitCodes.OK,
         message: 'User registered successfully.',
         user: {
             id: user.id,
