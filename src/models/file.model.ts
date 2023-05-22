@@ -30,7 +30,7 @@ function defineModel(sequelize: Sequelize) {
             allowNull: false,
         },
         data: {
-            type: DataTypes.BLOB,
+            type: DataTypes.BLOB('long'),
             allowNull: false,
         },
     }, {

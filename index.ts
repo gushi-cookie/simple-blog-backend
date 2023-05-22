@@ -18,7 +18,7 @@ app.use(cdnRouter);
 
 
 (async () => {
-    await sequelizeConnection.sync({ force: true });
+    await sequelizeConnection.sync({ force: false });
 
     app.listen(port, () => {
         console.log(`[server]: Server is running at http://localhost:${port}`);

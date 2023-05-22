@@ -1,0 +1,10 @@
+export default {
+    OK: 0,
+    SERVER_ERROR: 1,
+    INVALID_AUTH: 3,
+    USER_ALREADY_EXISTS: 4,
+    UNKNOWN_ERROR: 5,
+    PERMISSION_DENY: 10,
+    NOT_FOUND: 14,
+    INVALID_PARAMS: 18,
+};

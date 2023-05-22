@@ -3,6 +3,10 @@ import { BlogPost } from '../models/blog-post.model';
 import { File } from '../models/file.model';
 import { type CustomRequest } from '../middlewares/authenticateToken';
 import fileUtil, { type ValidatedFileName } from '../utils/file.util';
+import exitCodes from '../utils/exit-codes.util';
+import { User } from '../models/user.model';
+import { type AssocBlogPost } from './posts-list.controller';
+import mime from 'mime-types';
 
 
 async function fetchBlogPost(req: Request, res: Response) {
@@ -10,45 +14,54 @@ async function fetchBlogPost(req: Request, res: Response) {
 
     let post = await BlogPost.findOne({
         where: { id },
+        include: User,
+    }) as AssocBlogPost;
+
+    if(!post) return res.status(404).json({ message: 'Post not found', code: exitCodes.NOT_FOUND });
+
+    let postFile = await File.findOne({ 
+        where: { postId: post.id },
+        attributes: ['id', 'postId', 'name', 'extension'],
     });
 
-    if(!post) {
-        res.status(404).json({ message: 'Post not found' });
-        return;
+
+    let file;
+    if(postFile) {
+        file = {
+            url: `/cdn/files/${postFile.id}/${postFile.name}.${postFile.extension}`,
+            name: `${postFile.name}.${postFile.extension}`,
+            mediaType: (mime.lookup(postFile.extension) as string).split('/')[0],
+        };
     }
 
-    let file = await File.findOne({ 
-        where: { postId: post.id },
-        attributes: ['id', 'name', 'extension'],
-    });
-
-    let fileUrl;
-    if(file) fileUrl = `/cdn/files/${file.id}/${file.name}.${file.extension}`;
-
     res.json({
+        code: exitCodes.OK,
         message: 'Success.',
         post: {
             id: post.id,
             userId: post.userId,
+            nickname: post.User.nickname,
             message: post.message,
-            fileUrl,
             date: post.date,
+            file,
         },
     });
 };
 
 async function createBlogPost(req: Request, res: Response) {
-    // expected body params: message OR file, fileName
-    if(!req.body.message && !req.body.file || req.body.file && !req.body.fileName) {
-        res.status(400).json({ message: 'Post create request must have one of these parameters: message OR file, fileName' });
-        return;
+    // expected body params: message OR file in (multipart/form-data)
+    if(!req.body.message && !req.file) {
+        return res.status(400).json({
+            code: exitCodes.INVALID_PARAMS,
+            message: 'Post create request must have one of these parameters: message OR file, fileName',
+        });
     }
 
+    
     let fileName: ValidatedFileName | null = null;
-    if(req.body.file) {
-        let result = fileUtil.validateFileName(req.body.fileName);
-        if(!result) return res.status(400).json({ message: 'File format is not supported.' });
-        fileName = result;
+    if(req.file) {
+        fileName = fileUtil.validateFileName(req.file.originalname);
+        if(!fileName) return res.status(400).json({ message: 'File format is not supported.', code: exitCodes.INVALID_PARAMS });
     }
     
 
@@ -60,17 +73,18 @@ async function createBlogPost(req: Request, res: Response) {
     });
 
 
-    if(req.body.file && fileName) {
+    if(req.file && fileName) {
         await File.create({
             postId: post.id,
             name: fileName.name,
             extension: fileName.extension,
-            data: req.body.file,
+            data: req.file.buffer,
         });
     }
 
 
     res.json({
+        code: exitCodes.OK,
         message: 'Post created.',
         postId: post.id,
     });
@@ -85,16 +99,16 @@ async function deleteBlogPost(req: Request, res: Response) {
     });
 
     if(!post) {
-        return res.status(404).json({ message: 'Post not found.' });
+        return res.status(404).json({ message: 'Post not found.', code: exitCodes.NOT_FOUND });
     } else if(post.userId !== payload.userId) {
-        return res.status(403).json({ message: 'Permission denied.' });
+        return res.status(403).json({ message: 'Permission denied.', code: exitCodes.PERMISSION_DENY });
     }
 
     await BlogPost.destroy({
         where: { id: post.id },
     });
 
-    res.json({ message: 'Post has been deleted.' });
+    res.json({ message: 'Post has been deleted.', code: exitCodes.OK });
 };
 
 async function editBlogPost(req: Request, res: Response) {
@@ -104,7 +118,7 @@ async function editBlogPost(req: Request, res: Response) {
 
     let message = req.body.message;
     if(!message) {
-        return res.status(400).json({ message: 'Couldn\'t handle the request due to invalid or insufficient params.' });
+        return res.status(400).json({ message: 'Couldn\'t handle the request due to invalid or insufficient params.', code: exitCodes.INVALID_PARAMS });
     }
 
     let post = await BlogPost.findOne({
@@ -112,11 +126,11 @@ async function editBlogPost(req: Request, res: Response) {
     });
 
     if(!post) {
-        return res.status(404).json({ message: 'Post not found.' });
+        return res.status(404).json({ message: 'Post not found.', code: exitCodes.NOT_FOUND });
     } else if(post.userId !== payload.userId) {
-        return res.status(403).json({ message: 'Permission denied.' });
+        return res.status(403).json({ message: 'Permission denied.', code: exitCodes.PERMISSION_DENY });
     } else if(post.message === message) {
-        return res.status(400).json({ message: 'Nothing to update.' });
+        return res.status(400).json({ message: 'Nothing to update.', code: exitCodes.INVALID_PARAMS });
     }
 
     post.set({
@@ -126,6 +140,7 @@ async function editBlogPost(req: Request, res: Response) {
     await post.save();
 
     res.json({
+        code: exitCodes.OK,
         message: 'Post modified.',
         post: {
             id: post.id,
