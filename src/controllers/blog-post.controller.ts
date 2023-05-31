@@ -50,14 +50,10 @@ async function fetchBlogPost(req: Request, res: Response) {
 
 async function createBlogPost(req: Request, res: Response) {
     // expected body params: message OR file in (multipart/form-data)
-    if(!req.body.message && !req.file) {
-        return res.status(400).json({
-            code: exitCodes.INVALID_PARAMS,
-            message: 'Post create request must have one of these parameters: message OR file, fileName',
-        });
+    if(req.body.message === undefined && !req.file) {
+        return res.status(400).json({ message: 'Post create request must have one of these parameters: message OR file.', code: exitCodes.INVALID_PARAMS });
     }
 
-    
     let fileName: ValidatedFileName | null = null;
     if(req.file) {
         fileName = fileUtil.validateFileName(req.file.originalname);
