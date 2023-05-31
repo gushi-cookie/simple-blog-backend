@@ -112,42 +112,61 @@ async function deleteBlogPost(req: Request, res: Response) {
 };
 
 async function editBlogPost(req: Request, res: Response) {
-    // expected body params: message
+    // expected body params: message OR file OR actions
+    // actions: ['delete-file']
     let postId: number = Number(req.params.id);
     let payload = (req as CustomRequest).payload;
 
     let message = req.body.message;
-    if(!message) {
+    let file = req.file;
+    let actions;
+    if(req.body.actions) {
+        let array = JSON.parse(req.body.actions);
+        if(!(array instanceof Array)) return res.status(400).json({ message: '\'actions\' param must be a JSON array.', code: exitCodes.INVALID_PARAMS });
+        actions = array as string[];
+    }
+
+    if(message === undefined && !file && !actions) {
         return res.status(400).json({ message: 'Couldn\'t handle the request due to invalid or insufficient params.', code: exitCodes.INVALID_PARAMS });
     }
 
-    let post = await BlogPost.findOne({
-        where: { id: postId },
-    });
 
+    let post = await BlogPost.findOne({ where: { id: postId } });
     if(!post) {
         return res.status(404).json({ message: 'Post not found.', code: exitCodes.NOT_FOUND });
     } else if(post.userId !== payload.userId) {
         return res.status(403).json({ message: 'Permission denied.', code: exitCodes.PERMISSION_DENY });
-    } else if(post.message === message) {
-        return res.status(400).json({ message: 'Nothing to update.', code: exitCodes.INVALID_PARAMS });
     }
 
-    post.set({
-        message,
-        date: Date.now(),
-    });
-    await post.save();
+
+    if(file) {
+        let fileName: ValidatedFileName | null = null;
+        fileName = fileUtil.validateFileName(file.originalname);
+        if(!fileName) return res.status(400).json({ message: 'File format is not supported.', code: exitCodes.INVALID_PARAMS });
+
+        await File.destroy({ where: { postId } });
+        await File.create({
+            postId,
+            name: file.originalname,
+            extension: fileName.extension,
+            data: file.buffer,
+        });
+    }
+
+    if(actions && actions.includes('delete-file')) {
+        await File.destroy({ where: { postId } });
+    }
+
+    if(message !== undefined) {
+        post.set({ message });
+        await post.save();
+    }
+    
 
     res.json({
         code: exitCodes.OK,
         message: 'Post modified.',
-        post: {
-            id: post.id,
-            userId: post.userId,
-            message: post.message,
-            date: post.date,
-        }
+        postId,
     });
 };
 
