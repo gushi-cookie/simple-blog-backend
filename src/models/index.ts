@@ -24,8 +24,8 @@ export const sequelizeConnection = new Sequelize({
 UserModel.defineModel(sequelizeConnection);
 BlogPostModel.defineModel(sequelizeConnection);
 FileModel.defineModel(sequelizeConnection);
-BlogPost.belongsTo(User, { foreignKey: 'userId' });
-File.belongsTo(BlogPost, { foreignKey: 'postId' });
+BlogPost.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+File.belongsTo(BlogPost, { foreignKey: 'postId', onDelete: 'CASCADE' });
 
 
 export async function checkDatabase() {
