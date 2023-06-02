@@ -12,7 +12,7 @@ const dbPass = process.env.DB_PASS;
 const dbHost = process.env.DB_HOST;
 const dbDialect = process.env.DB_DIALECT as Dialect;
 
-const sequelizeConnection = new Sequelize({
+export const sequelizeConnection = new Sequelize({
     database: dbName, 
     username: dbUser,
     password: dbPass,
@@ -28,4 +28,22 @@ BlogPost.belongsTo(User, { foreignKey: 'userId' });
 File.belongsTo(BlogPost, { foreignKey: 'postId' });
 
 
-export default sequelizeConnection;
+export async function checkDatabase() {
+    let connection = new Sequelize({
+        username: dbUser,
+        password: dbPass,
+        port: dbPort,
+        host: dbHost,
+        dialect: dbDialect,
+    });
+
+    await connection.sync();
+    
+    try {
+        await connection.query(`CREATE DATABASE ${dbName}`);
+    } catch(error: any) {
+        if(error.original.code !== '42P04') throw error;
+    }
+
+    await connection.close();
+};

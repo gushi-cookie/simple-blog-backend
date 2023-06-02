@@ -1,5 +1,5 @@
 import express, { Express, Request, Response } from 'express';
-import sequelizeConnection from './src/models';
+import { sequelizeConnection, checkDatabase } from './src/models';
 import authRouter from './src/routes/auth';
 import blogPostRouter from './src/routes/blog-post';
 import postsListRouter from './src/routes/posts-list';
@@ -18,6 +18,7 @@ app.use(cdnRouter);
 
 
 (async () => {
+    await checkDatabase(); 
     await sequelizeConnection.sync({ force: false });
 
     app.listen(port, () => {
