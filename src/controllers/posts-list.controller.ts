@@ -23,15 +23,19 @@ async function queryFilesOfPosts(postIds: number[]) {
 async function fetchList(req: Request, res: Response) {
     // available query params: page
     let pageNumber = Number(req.query.page);
-    if(!pageNumber) pageNumber = 0;
+    if(!pageNumber || pageNumber <= 0) pageNumber = 1;
+
 
     let result = await BlogPost.findAndCountAll({
         order: [['date', 'DESC']],
         limit: PAGINATION,
-        offset: PAGINATION * pageNumber,
+        offset: PAGINATION * (pageNumber - 1),
         include: User,
     });
-    if(result.rows.length === 0) return res.status(404).json('List not found.');
+    if(result.rows.length === 0) {
+        return res.status(404).json({ message: 'List not found.', code: exitCodes.NOT_FOUND });
+    }
+
 
     let posts = new Array<AssocBlogPost>();
     result.rows.forEach(row => {
@@ -42,6 +46,7 @@ async function fetchList(req: Request, res: Response) {
     posts.forEach((post) => {
         post.File = files.find((file) => file.postId === post.id);
     });
+
 
     let rawPosts = new Array();
     let file;
@@ -64,6 +69,7 @@ async function fetchList(req: Request, res: Response) {
             file,
         });
     });
+
 
     res.json({
         message: 'Success.',
